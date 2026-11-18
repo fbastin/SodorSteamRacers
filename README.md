@@ -11,6 +11,7 @@ Open `index.html` in a recent desktop browser. An internet connection is needed 
 | Arrows / WASD | Drive |
 | Shift | Drift (a long drift gives a mini-turbo) |
 | Space | Use item |
+| M | Toggle music on / off |
 | P | Pause |
 | Esc | Back to menu |
 
@@ -26,8 +27,9 @@ Open `index.html` in a recent desktop browser. An internet connection is needed 
 - **Items**: Coal Boost, Oil Slick, Runaway Truck and Whistle Blast.
 - **Hall of Fame** per track, with the five best race times and the five best lap times.
 - **Two graphics styles**, Realistic and Cartoon, selectable in the menu.
+- **Original synthesized railway music**, with an option to turn music on or off in the menu or at any time with `M`.
 
-Season saves, Hall of Fame times, the driver name and the graphics setting are stored in the browser (`localStorage`), so they stay on the browser and computer where they were made.
+Season saves, Hall of Fame times, the driver name, the graphics setting and the music preference are stored in the browser (`localStorage`), so they stay on the browser and computer where they were made.
 
 ## Disclaimer
 
