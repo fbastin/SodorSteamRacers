@@ -1,10 +1,10 @@
 # Sodor Steam Racers
 
-A 3D kart-style racing game in the browser, where the racers are steam engines. Everything lives in a single file, `index.html`.
+A 3D kart-style racing game in the browser, where the racers are steam engines. The whole game lives in a single file, `index.html`; the only other file is the 3D library it uses, `vendor/three.min.js`.
 
 ## Play
 
-Open `index.html` in a recent browser. An internet connection is needed on load, because the 3D library (three.js r128) comes from a CDN. The game can be played with a keyboard, a game controller or a touch screen; the in-game **How to play** screen lists every control.
+Open `index.html` in a recent browser. The 3D library (three.js r128) is included in the `vendor` folder, so the game also works offline; if that folder is missing, the library is loaded from a CDN instead. The game can be played with a keyboard, a game controller or a touch screen; the in-game **How to play** screen lists every control.
 
 | Keyboard | Controller | Action |
 |---|---|---|
@@ -16,7 +16,7 @@ Open `index.html` in a recent browser. An internet connection is needed on load,
 | Esc or P | Start | Pause (resume, restart or quit) |
 | M | | Music on / off |
 
-On a touch screen, on-screen buttons appear: ◀ ▶ to steer (the engine accelerates by itself), and DRIFT, ITEM and BRAKE on the right. In the menu, the arrow keys or the D-pad choose the engine (← →) and the track (↑ ↓).
+On a touch screen, on-screen buttons appear: ◀ ▶ to steer (the engine accelerates by itself), and DRIFT, ITEM and BRAKE on the right. For a rocket start, hold BRAKE during the countdown and let go just before GO. In the menu, the arrow keys or the D-pad choose the engine (← →) and the track (↑ ↓).
 
 ## Features
 
@@ -30,7 +30,7 @@ On a touch screen, on-screen buttons appear: ◀ ▶ to steer (the engine accele
 - **Driving skills**: rocket start on the signal lights, three-stage drift mini-turbos, slipstream behind other engines, boost pads.
 - **Seven items**: Coal Boost, Triple Coal, Oil Slick, Runaway Truck, Whistle Blast, Buffer Shield and Red Signal.
 - **Race screen**: signal-light countdown, speedometer, lap splits, wrong-way warning, minimap, and race statistics at the finish.
-- **Hall of Fame** per track, with the five best race times and the five best lap times.
+- **Hall of Fame** per track, with the five best race times and the five best lap times, ranked separately for races (Single Race and Season) and for Time Trial.
 - **Options**: Realistic or Cartoon graphics, three quality levels for slower computers, camera distance, music and sound-effect volumes.
 - **Original synthesized music**: a gentle menu theme, a race theme arranged in a different style on each track (bouncy, calypso, rock, folk, sleigh bells, night swing) that speeds up on the final lap, and finish-line fanfares.
 - **Synthesized sound effects**: a whistle of its own for every engine (a bell for Toby, horns for Diesel and Kana), steam chuffs paced by the wheels, rail-joint clatter, flange squeal when drifting, nearby rivals heard in stereo, and an ambience for each track (birds, waves and gulls, wind, crickets and owls).
@@ -43,4 +43,4 @@ This is an unofficial, non-commercial fan project. It is not affiliated with, en
 
 ## License
 
-The code is released under the [MIT License](LICENSE).
+The code is released under the [MIT License](LICENSE). `vendor/three.min.js` is [three.js](https://threejs.org) r128, © three.js authors, also under the MIT License.
