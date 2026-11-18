@@ -17,7 +17,7 @@ Open `index.html` in a recent desktop browser. An internet connection is needed 
 
 ## Features
 
-- **Ten engines**, modelled by type (tank engines, tender engines, a tram, a diesel shunter, an electric), each with its own speed, acceleration and handling.
+- **Eleven engines**, modelled by type (tank engines, tender engines, a tram, a diesel shunter, an electric), each with its own speed, acceleration and handling.
 - **Six tracks**: Sodor Meadows, Seaside Line, Quarry Run, Autumn Woods, Snowy Pass and Moonlight Yard (a night race).
 - **Three game modes**:
   - *Single Race* against seven other engines.
