@@ -32,3 +32,7 @@ Season saves, Hall of Fame times, the driver name and the graphics setting are s
 ## Disclaimer
 
 This is an unofficial, non-commercial fan project. It is not affiliated with, endorsed by or connected to the owners of *Thomas & Friends*; character names belong to their respective owners.
+
+## License
+
+The code is released under the [MIT License](LICENSE).
