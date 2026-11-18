@@ -32,7 +32,8 @@ On a touch screen, on-screen buttons appear: ◀ ▶ to steer (the engine accele
 - **Race screen**: signal-light countdown, speedometer, lap splits, wrong-way warning, minimap, and race statistics at the finish.
 - **Hall of Fame** per track, with the five best race times and the five best lap times.
 - **Options**: Realistic or Cartoon graphics, three quality levels for slower computers, camera distance, music and sound-effect volumes.
-- **Original synthesized railway music**, plus engine sounds (steam chuffs, diesel and electric hum).
+- **Original synthesized music**: a gentle menu theme, a race theme arranged in a different style on each track (bouncy, calypso, rock, folk, sleigh bells, night swing) that speeds up on the final lap, and finish-line fanfares.
+- **Synthesized sound effects**: a whistle of its own for every engine (a bell for Toby, horns for Diesel and Kana), steam chuffs paced by the wheels, rail-joint clatter, flange squeal when drifting, nearby rivals heard in stereo, and an ambience for each track (birds, waves and gulls, wind, crickets and owls).
 
 Season saves, Hall of Fame times, ghosts, the driver name and all options are stored in the browser (`localStorage`), so they stay on the browser and computer where they were made.
 
