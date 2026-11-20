@@ -2191,10 +2191,12 @@ function tickMusic(){
   if(!AC) return;
   amb.tick();
   const running = audioClock!==null || AC.state==='running';
+  menuRecSync(running && musicOn && state==='menu');
   if(!running || !musicOn || paused || (state==='race' && countdown>0)){ musicNextT=tnow()+0.04; return; }
   const now=tnow(), mode = state==='menu' ? 'menu' : (player&&player.finished ? 'results' : 'race');
   if(mode!==musicMode){ musicMode=mode; musicStep=0; if(mode!=='results') musicHold=0; }
   if(now<musicHold){ musicNextT=musicHold; return; }   // a jingle is playing
+  if(mode==='menu' && menuRec.state!=='none'){ musicNextT=now+0.04; return; }   // the recorded theme plays (or is still loading)
   const race=mode==='race', fin=race&&player.lap>=LAPS, S=race?(STYLES[curTrack]||STYLES[0]):MENU_STYLE, song=race?SONG:MENU_SONG;
   const sd=S.step*(fin?0.86:1), tr=(race?(TRACK_KEYS[curTrack]||0):0)+(fin?2:0), v=(mode==='results'?0.55:mode==='menu'?0.75:1)*(S.gain||1);
   if(musicNextT < now-0.05) musicNextT = now+0.02;
@@ -2203,6 +2205,27 @@ function tickMusic(){
     playStep(S,song[bi],song[(bi+1)%song.length],st,musicNextT+(st%4===2?S.swing*sd*2:0),sd,tr,v,fin);
     musicNextT+=sd; musicStep=(musicStep+1)%(song.length*16);
   }
+}
+/* the menu theme: a recorded piece (music/menu.js, made with Composer and ACE-Step 1.5), looped through the music bus.
+   It is loaded as a script because a page opened as a file may not fetch files nor play them through Web Audio;
+   without it, the synthesised menu theme plays. */
+const menuRec = {state:'loading', buf:null, src:null, g:null, a:0, b:0};   // state: loading, ready or none
+(()=>{ const s=document.createElement('script'); s.src='music/menu.js'; s.onload=()=>decodeMenuRec(true); s.onerror=()=>{ menuRec.state='none'; }; document.head.appendChild(s); })();
+function decodeMenuRec(loaded){   // called when the script has loaded and when audio starts, whichever comes last decodes
+  const m=window.SSR_MENU_MUSIC; if(!m||!m.data){ if(loaded) menuRec.state='none'; return; }
+  if(!AC||menuRec.buf||menuRec.decoding) return; menuRec.decoding=true;
+  try{ const bin=atob(m.data), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+    AC.decodeAudioData(u.buffer, b=>{   // MP3 decoders differ on the encoder delay: find where the sound starts, then place the loop from there
+      const d=b.getChannelData(0); let i0=0; while(i0<d.length&&i0<b.sampleRate*0.3&&Math.abs(d[i0])<0.004) i0++;
+      const t0=i0<b.sampleRate*0.3?i0/b.sampleRate:0; menuRec.a=t0+m.loopStart; menuRec.b=t0+m.loopEnd; menuRec.gain=m.gain||1; menuRec.buf=b; menuRec.state='ready'; },
+      ()=>{ menuRec.state='none'; });
+  }catch(e){ menuRec.state='none'; }
+}
+function menuRecSync(want){   // start the recorded theme on the menu, fade it out when leaving
+  const r=menuRec, t=tnow();
+  if(want&&r.buf&&!r.src){ r.g=AC.createGain(); r.g.gain.setValueAtTime(0,t); r.g.gain.linearRampToValueAtTime(r.gain,t+1.2); r.g.connect(BUS.musicIn);
+    r.src=AC.createBufferSource(); r.src.buffer=r.buf; r.src.loop=true; r.src.loopStart=r.a; r.src.loopEnd=r.b; r.src.connect(r.g); r.src.start(t,r.a); }
+  else if(!want&&r.src){ r.g.gain.cancelScheduledValues(t); r.g.gain.setValueAtTime(r.g.gain.value,t); r.g.gain.linearRampToValueAtTime(0,t+0.6); r.src.stop(t+0.65); r.src=null; r.g=null; }
 }
 /* short fanfares for the finish line */
 const JINGLES = {
@@ -2222,7 +2245,7 @@ function initAudio(){
   if(AC){ if(AC.state === 'suspended' && audioClock===null) AC.resume(); syncMusicGain(); return; }
   try{
     AC = new (window.AudioContext || window.webkitAudioContext)();
-    setupMixer();
+    setupMixer(); decodeMenuRec();
     musicNextT = tnow() + 0.05;
     if(!musicTimer) musicTimer = setInterval(tickMusic, 40);
     if(T) amb.start(state==='race'?curTrack:menuTrack());
