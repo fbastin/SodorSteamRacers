@@ -1,6 +1,6 @@
 # Sodor Steam Racers
 
-A 3D kart-style racing game in the browser, where the racers are steam engines. The whole game lives in a single file, `index.html`; the 3D library it uses is in `vendor/three.min.js` (and synthesized whistle exports are saved in `whistles/`).
+A 3D kart-style racing game in the browser, where the racers are steam engines. The whole game lives in a single file, `index.html`; the 3D library it uses is in `vendor/three.min.js` and the recorded menu theme in `music/menu.js` (synthesized whistle exports are saved in `whistles/`).
 
 ## Play
 
@@ -37,7 +37,7 @@ On a touch screen, on-screen buttons appear: ◀ ▶ to steer (the engine accele
 - **Engine Gallery**: browse all twelve engines with 3D previews, characteristics (speed, acceleration, handling, weight), and interactive whistle playback.
 - **Hall of Fame** per track, with the five best race times and the five best lap times, ranked separately for races (Single Race and Season) and for Time Trial.
 - **Options**: Realistic or Cartoon graphics, three quality levels for slower computers, camera distance, music and sound-effect volumes.
-- **Original synthesized music**: a gentle menu theme, a race theme arranged in a different style on each track (bouncy, calypso, rock, folk, sleigh bells, night swing, brass band, harp, western, pipes, reggae, bluegrass, organ jazz, barn dance, machine beat, music box) that speeds up on the final lap, and finish-line fanfares.
+- **Music**: a cheerful folk menu theme (accordion, tin whistle, guitar), recorded and looped (if `music/menu.js` is missing, a gentle synthesized theme plays instead), and original synthesized music in the races: a race theme arranged in a different style on each track (bouncy, calypso, rock, folk, sleigh bells, night swing, brass band, harp, western, pipes, reggae, bluegrass, organ jazz, barn dance, machine beat, music box) that speeds up on the final lap, and finish-line fanfares.
 - **Synthesized sound effects**: a whistle of its own for every engine (a bell for Toby, horns for Diesel and Kana), steam chuffs paced by the wheels, rail-joint clatter, flange squeal when drifting, nearby rivals heard in stereo, and an ambience for each track (birds, waves and gulls, a foghorn, wind, crickets and owls, a cuckoo, a hawk, curlews, frogs, a woodpecker, rain and thunder, steam hissing in the works).
 
 Season and cup saves, cup trophies, Hall of Fame times, ghosts, the driver name and all options are stored in the browser (`localStorage`), so they stay on the browser and computer where they were made.
@@ -49,3 +49,5 @@ This is an unofficial, non-commercial fan project. It is not affiliated with, en
 ## License
 
 The code is released under the [MIT License](LICENSE). `vendor/three.min.js` is [three.js](https://threejs.org) r128, © three.js authors, also under the MIT License.
+
+The menu theme in `music/menu.js` is AI-generated music: it was made with [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5) (MIT License) through Composer, from a text description of the style (no lyrics, no reference recording), then cut into a seamless loop.

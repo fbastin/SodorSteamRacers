@@ -1807,6 +1807,7 @@ function setupMixer(){
   BUS.musicIn=AC.createGain(); musicGain=AC.createGain(); musicGain.gain.value=musicOn?settings.musicVol:0; BUS.duck=AC.createGain();
   BUS.musicIn.connect(musicGain); musicGain.connect(BUS.duck); BUS.duck.connect(BUS.comp);
   BUS.musicSend=AC.createGain(); BUS.musicSend.gain.value=0.2; BUS.duck.connect(BUS.musicSend); BUS.musicSend.connect(BUS.rev);
+  BUS.recVol=AC.createGain(); BUS.recVol.gain.value=musicGain.gain.value; BUS.recVol.connect(BUS.comp);   // the recorded menu theme: same volume, no added reverb (it is already mixed)
   BUS.dIn=AC.createGain(); BUS.delay=AC.createDelay(1.5); BUS.delay.delayTime.value=0.33; BUS.dLp=AC.createBiquadFilter(); BUS.dLp.type='lowpass'; BUS.dLp.frequency.value=2400;
   BUS.dFb=AC.createGain(); BUS.dFb.gain.value=0.28; BUS.dOut=AC.createGain(); BUS.dOut.gain.value=0.3;
   BUS.dIn.connect(BUS.delay); BUS.delay.connect(BUS.dLp); BUS.dLp.connect(BUS.dFb); BUS.dFb.connect(BUS.delay); BUS.dLp.connect(BUS.dOut); BUS.dOut.connect(BUS.musicIn);
@@ -1821,7 +1822,7 @@ function duckMusic(amount,sec){ if(!AC) return; const t=tnow(), g=BUS.duck.gain;
 function syncMusicGain(){
   if(AC && musicGain){
     const t=tnow(), active = musicOn && !paused && !(state==='race' && countdown>0);
-    musicGain.gain.setTargetAtTime(active ? settings.musicVol : 0, t, 0.015);
+    musicGain.gain.setTargetAtTime(active ? settings.musicVol : 0, t, 0.015); BUS.recVol.gain.setTargetAtTime(active ? settings.musicVol : 0, t, 0.015);
     BUS.amb.gain.setTargetAtTime(paused ? 0 : (state==='menu' ? 0.6 : 0.85), t, 0.25);
   }
   if($('musicBtn')) $('musicBtn').textContent = musicOn ? '🎵 Music: On (M)' : '🔇 Music: Off (M)';
@@ -2208,7 +2209,7 @@ function tickMusic(){
     musicNextT+=sd; musicStep=(musicStep+1)%(song.length*16);
   }
 }
-/* the menu theme: a recorded piece (music/menu.js, made with Composer and ACE-Step 1.5), looped through the music bus.
+/* the menu theme: a recorded piece (music/menu.js, made with Composer and ACE-Step 1.5), looped at the music volume.
    It is loaded as a script because a page opened as a file may not fetch files nor play them through Web Audio;
    without it, the synthesised menu theme plays. */
 const menuRec = {state:'loading', buf:null, src:null, g:null, a:0, b:0};   // state: loading, ready or none
@@ -2225,7 +2226,7 @@ function decodeMenuRec(loaded){   // called when the script has loaded and when 
 }
 function menuRecSync(want){   // start the recorded theme on the menu, fade it out when leaving
   const r=menuRec, t=tnow();
-  if(want&&r.buf&&!r.src){ r.g=AC.createGain(); r.g.gain.setValueAtTime(0,t); r.g.gain.linearRampToValueAtTime(r.gain,t+1.2); r.g.connect(BUS.musicIn);
+  if(want&&r.buf&&!r.src){ r.g=AC.createGain(); r.g.gain.setValueAtTime(0,t); r.g.gain.linearRampToValueAtTime(r.gain,t+1.2); r.g.connect(BUS.recVol);
     r.src=AC.createBufferSource(); r.src.buffer=r.buf; r.src.loop=true; r.src.loopStart=r.a; r.src.loopEnd=r.b; r.src.connect(r.g); r.src.start(t,r.a); }
   else if(!want&&r.src){ r.g.gain.cancelScheduledValues(t); r.g.gain.setValueAtTime(r.g.gain.value,t); r.g.gain.linearRampToValueAtTime(0,t+0.6); r.src.stop(t+0.65); r.src=null; r.g=null; }
 }
