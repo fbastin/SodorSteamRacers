@@ -15,6 +15,7 @@
   #info{left:24px;top:84px;font-size:14px;font-weight:normal;line-height:1.5}
   #item{left:50%;top:14px;transform:translateX(-50%);width:92px;height:92px;border:5px solid #ffd53d;border-radius:18px;background:rgba(0,0,40,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:46px}
   #item span{font-size:11px;margin-top:-4px}
+  .tri{display:inline-grid;grid-template-columns:auto auto;justify-items:center;font-size:.62em;line-height:.95;font-style:normal;vertical-align:middle} .tri i{font-style:normal} .tri .top{grid-column:1/3}   /* Triple Coal: flames in a triangle, one per charge left */
   #msg{left:0;right:0;top:30%;text-align:center;font-size:110px;color:#ffd53d}
   #drift{left:50%;bottom:26px;transform:translateX(-50%);width:220px;height:14px;border:3px solid #fff;border-radius:9px;overflow:hidden;background:rgba(0,0,0,.4);opacity:0}
   #drift div{height:100%;width:0;background:#4cf}
@@ -93,7 +94,7 @@
   #musicBtn:hover{border-color:#ffd53d}
   #pause{background:rgba(10,20,60,.62)}
   #howto{justify-content:flex-start;padding:8px 0 16px}
-  #howto table{font-size:15px} #howto td{padding:3px 10px} #howto td:first-child{white-space:nowrap;font-weight:bold}
+  #howto table{font-size:15px} #howto td{padding:3px 10px} #howto td:first-child{white-space:nowrap;font-weight:bold} #howto .tri{font-size:.8em;margin-right:2px}
   #speed{right:20px;bottom:36px;font-size:34px} #speed small{font-size:15px;font-weight:normal}
   #warn{left:0;right:0;top:19%;text-align:center;font-size:32px;color:#ff7a6b}
   #split{left:0;right:0;top:46%;text-align:center;font-size:28px;opacity:0;transition:opacity .35s}
@@ -155,7 +156,7 @@
     #pos{font-size:58px} #pos small{font-size:24px}
     #lap{font-size:20px;top:10px;left:14px} #time{top:38px;left:14px;font-size:16px} #info{top:62px;left:14px;font-size:11px}
     #map{width:110px;height:110px;top:10px;right:10px} #musicBtn{top:128px;right:10px}
-    #item{width:66px;height:66px;font-size:30px;top:10px} #item span{font-size:9px}
+    #item{width:66px;height:66px;font-size:30px;top:10px} #item span{font-size:9px} #item .tri{font-size:.54em;line-height:.9;margin-bottom:3px}
     #msg{font-size:60px} #warn{font-size:20px} #split{font-size:18px} #speed{font-size:24px}
     #lights{top:86px} #lights i{width:24px;height:24px}
     .mtop{grid-template-columns:96px 1fr 0} .mtop .mtitle{font-size:18px} #mHome h1{margin-top:3vh} .mbtn b{font-size:18px}
@@ -291,7 +292,7 @@
     </table>
     <h3>Items</h3><table>
       <tr><td>🔥 Coal Boost</td><td>A burst of speed</td></tr>
-      <tr><td>🔥 Triple Coal</td><td>Three boosts in a row</td></tr>
+      <tr><td><i class="tri"><i class="top">🔥</i><i>🔥</i><i>🔥</i></i> Triple Coal</td><td>Three boosts in a row</td></tr>
       <tr><td>🛢️ Oil Slick</td><td>Dropped behind you</td></tr>
       <tr><td>🚃 Runaway Truck</td><td>Rolls ahead along the track</td></tr>
       <tr><td>📯 Whistle Blast</td><td>Spins out engines close to you</td></tr>
@@ -372,12 +373,13 @@ const TRACKS = [
   {name:'Starlight Summit', sky:0x1c2c56, top:0x050818, ground:0xf2f6fa, hill:0xdfe8ef, tree:0xffffff, rocks:0.15, mount:0x8fa0b8, dust:0xffffff, verge:0xcfd8df, snow:true, night:true, fall:null, aurora:true, peaks:0.45, trees:380,
    pts:[[-5,-37],[30,-37],[55,-40],[75,-72],[105,-85],[135,-65],[147,-15],[138,40],[110,75],[75,72],[55,40],[30,37],[-5,37],[-30,37],[-55,40],[-75,72],[-110,75],[-138,40],[-147,-15],[-135,-65],[-105,-85],[-75,-72],[-55,-40],[-30,-37]]},
 ];
+const flames = n => '<i class="tri">'+(n%2?'<i class="top">🔥</i>':'')+'<i>🔥</i>'.repeat(n-n%2)+'</i>';   // 3: triangle, 2: side by side, 1: one small flame
 const ITEMS = {
   boost:  {icon:'🔥', name:'Coal Boost'},
   oil:    {icon:'🛢️', name:'Oil Slick'},
   truck:  {icon:'🚃', name:'Runaway Truck'},
   whistle:{icon:'📯', name:'Whistle Blast'},
-  triple: {icon:'🔥', name:'Triple Coal'},
+  triple: {icon:flames(3), name:'Triple Coal'},
   shield: {icon:'🛡️', name:'Buffer Shield'},
   signal: {icon:'🚦', name:'Red Signal'},
 };
@@ -2821,7 +2823,7 @@ function hud(dt){
   setH('info',info);
   let ih='';
   if(player.pending>0){ const ks=Object.keys(ITEMS); ih=ITEMS[ks[Math.floor(performance.now()/80)%ks.length]].icon; }
-  else if(player.item) ih=ITEMS[player.item].icon+'<span>'+ITEMS[player.item].name+(player.item==='triple'?' ×'+player.charges:'')+'</span>';
+  else if(player.item) ih=(player.item==='triple'?flames(player.charges):ITEMS[player.item].icon)+'<span>'+ITEMS[player.item].name+(player.item==='triple'?' ×'+player.charges:'')+'</span>';
   setH('item',ih);
   setS('drift','opacity',player.drift>0?'1':'0'); setS('driftBar','width',clamp(player.drift/TIER_T[3]*100,0,100).toFixed(0)+'%'); setS('driftBar','background',['#ffffff','#4cc9ff','#ffa630','#c77dff'][player.tier]);
   if(hudC.cls!==touchMode){ hudC.cls=touchMode; $('game').className=touchMode?'touch':''; }
