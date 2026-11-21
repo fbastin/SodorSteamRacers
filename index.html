@@ -253,11 +253,12 @@
   <h1>OPTIONS</h1>
   <div class="opt"><span>Graphics</span><div class="row" id="gfx"></div></div>
   <div class="opt"><span>Quality</span><div class="row" id="qual"></div></div>
+  <div class="opt"><span>Effects</span><div class="row" id="fxo"></div></div>
   <div class="opt"><span>Camera</span><div class="row" id="camd"></div></div>
   <div class="opt"><span>Music</span><div class="row" id="music"></div><input type="range" id="mvol" min="0" max="100" aria-label="Music volume"></div>
   <div class="opt"><span>Sound effects</span><input type="range" id="svol" min="0" max="100" aria-label="Sound effects volume"></div>
   <div class="opt"><span>Records</span><button id="clearRec" class="alt">CLEAR HALL OF FAME &amp; GHOSTS</button></div>
-  <h2>Lower the quality if the game feels slow: fewer trees, softer shadows, lower resolution.</h2>
+  <h2>Lower the quality or turn the effects off if the game feels slow. Effects: ambient occlusion, glow and colour grading.</h2>
   <button id="optsClose">CLOSE</button>
 </div>
 
@@ -432,11 +433,12 @@ const angDiff = (a,b) => Math.atan2(Math.sin(a-b), Math.cos(a-b));
 /* ---------- settings: quality, volumes, camera (kept in the browser) ---------- */
 const QUAL = { low:{pr:1, shadow:0, veg:0.35, snow:500}, medium:{pr:1.5, shadow:1024, veg:0.65, snow:900}, high:{pr:2, shadow:2048, veg:1, snow:1400} };
 const touchDevice = typeof navigator!=='undefined' && ((navigator.maxTouchPoints||0)>0 || 'ontouchstart' in window);
-const settings = { quality: touchDevice ? 'medium' : 'high', musicVol:0.8, sfxVol:1, cam:1 };
+const settings = { quality: touchDevice ? 'medium' : 'high', musicVol:0.8, sfxVol:1, cam:1, fx:!touchDevice };
 try{ const s=JSON.parse(localStorage.getItem('ssr_settings'));
   if(s&&typeof s==='object'){ if(QUAL[s.quality]) settings.quality=s.quality;
     for(const k of ['musicVol','sfxVol']) if(typeof s[k]==='number'&&isFinite(s[k])) settings[k]=clamp(s[k],0,1);
-    if([0,1,2].includes(s.cam)) settings.cam=s.cam; } }catch(e){}
+    if([0,1,2].includes(s.cam)) settings.cam=s.cam;
+    if(typeof s.fx==='boolean') settings.fx=s.fx; } }catch(e){}
 function saveSettings(){ try{ localStorage.setItem('ssr_settings', JSON.stringify(settings)); }catch(e){} }
 function applyQuality(){   // pixel density and shadows; vegetation density is read when a track is built
   const q=QUAL[settings.quality], sh=q.shadow>0;
@@ -1027,6 +1029,143 @@ function applyTone(){   // filmic tone mapping in the realistic style; shared ma
 }
 function setGfx(v){ gfx = v==='toon' ? 'toon' : 'real'; E = gfx==='toon' ? E_T : E_R; try{ localStorage.setItem('ssr_gfx',gfx); }catch(e){} applyTone(); }
 applyTone();
+
+/* ---------- effects (Options → Effects): ambient occlusion, bloom, colour grading and vignette ----------
+   The scene is drawn once into a multisampled target (so the edges stay antialiased) that also keeps its depth.
+   Ambient occlusion is worked out from that depth at half resolution (scalable ambient obscurance), then smoothed
+   without bleeding across edges; the bloom is a chain of five ever smaller images added back together.
+   Needs WebGL 2; without it the picture is drawn as before. */
+const FX = { ready:null, w:0, h:0 };
+const FX_VERT = 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }';
+// Pixel (i,j) of the half-size occlusion image stands for depth texel (2i,2j): sampling between two depth texels would pick either at random.
+const FX_DEPTH = `uniform sampler2D tDepth; uniform mat4 uInvProj; uniform float uNear, uFar; uniform vec2 uFull, uHalf;
+  vec3 viewPos(vec2 uv){ float d=texture2D(tDepth,uv).x; vec4 p=uInvProj*vec4(vec3(uv,d)*2.0-1.0,1.0); return p.xyz/p.w; }
+  float viewZ(vec2 uv){ float d=texture2D(tDepth,uv).x; return (uNear*uFar)/((uFar-uNear)*d-uFar); }
+  vec2 depthUV(vec2 hp){ return (floor(hp)*2.0+0.5)/uFull; }
+  float ign(vec2 p){ return fract(52.9829189*fract(dot(p,vec2(0.06711056,0.00583715)))); }`;
+function fxMat(frag, uniforms, extra){
+  return new THREE.ShaderMaterial(Object.assign({ vertexShader:FX_VERT, fragmentShader:'varying vec2 vUv;\n'+frag, uniforms, depthTest:false, depthWrite:false, toneMapped:false }, extra));
+}
+function fxInit(){
+  if(FX.ready!==null) return FX.ready;
+  if(!renderer.capabilities.isWebGL2) return FX.ready=false;
+  sun.shadow.camera.layers.enableAll();   // see-through things move to layer 1 (below); those that cast a shadow keep it
+  const fl = renderer.extensions.has('EXT_color_buffer_float') ? THREE.HalfFloatType : THREE.UnsignedByteType;
+  const rt = (o={}) => new THREE.WebGLRenderTarget(1,1,Object.assign({minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter, format:THREE.RGBAFormat, depthBuffer:false, stencilBuffer:false}, o));
+  FX.scene = new THREE.WebGLMultisampleRenderTarget(1,1,{format:THREE.RGBAFormat, stencilBuffer:false});
+  FX.scene.samples = 4; FX.scene.texture.encoding = THREE.sRGBEncoding;   // the materials write sRGB, so 8 bits per channel keep the dark tones smooth
+  FX.scene.depthTexture = new THREE.DepthTexture(1,1); FX.scene.depthTexture.type = THREE.UnsignedIntType;   // 24-bit depth
+  FX.aoA = rt({minFilter:THREE.NearestFilter, magFilter:THREE.NearestFilter}); FX.aoB = rt({minFilter:THREE.NearestFilter, magFilter:THREE.NearestFilter});
+  FX.bloom = [0,1,2,3,4].map(()=>rt({type:fl}));
+  const depthU = () => ({ tDepth:{value:FX.scene.depthTexture}, uInvProj:{value:new THREE.Matrix4()}, uNear:{value:0.3}, uFar:{value:1100}, uFull:{value:new THREE.Vector2()}, uHalf:{value:new THREE.Vector2()} });
+  FX.ao = fxMat(FX_DEPTH+`
+    uniform mat4 uProj; uniform float uRadius, uIntensity, uBias, uFade;
+    const int NS = 12;
+    void main(){
+      vec2 uv=depthUV(gl_FragCoord.xy), t=1.0/uFull;
+      if(texture2D(tDepth,uv).x>=1.0){ gl_FragColor=vec4(1.0); return; }
+      vec3 P=viewPos(uv);
+      vec3 pr=viewPos(uv+vec2(t.x,0.0)), pl=viewPos(uv-vec2(t.x,0.0)), pu=viewPos(uv+vec2(0.0,t.y)), pd=viewPos(uv-vec2(0.0,t.y));
+      vec3 dx = abs(pr.z-P.z)<abs(P.z-pl.z) ? pr-P : P-pl, dy = abs(pu.z-P.z)<abs(P.z-pd.z) ? pu-P : P-pd;   // the flatter side, so edges do not bend the normal
+      vec3 N=cross(dx,dy); N = dot(N,N)>1e-12 ? normalize(N) : vec3(0.0,0.0,1.0);
+      float ssR=min(uRadius*uProj[1][1]*0.5*uFull.y/-P.z, uFull.y*0.1), a0=ign(gl_FragCoord.xy)*6.2832, r2=uRadius*uRadius, sum=0.0;
+      for(int i=0;i<NS;i++){
+        float al=(float(i)+0.5)/float(NS), ang=al*7.0*6.2832+a0;
+        vec3 v=viewPos(uv+vec2(cos(ang),sin(ang))*(ssR*al)/uFull)-P;
+        float vv=dot(v,v), f=max(r2-vv,0.0);
+        sum+=f*f*f*max((dot(v,N)-uBias)/(vv+0.01),0.0);
+      }
+      float ao=max(0.0,1.0-sum*uIntensity/(r2*r2*r2)*(5.0/float(NS)));
+      ao=mix(1.0,ao,1.0-smoothstep(uFade*0.45,uFade,-P.z));   // fades out in the distance, where it would only add noise
+      gl_FragColor=vec4(vec3(ao),1.0);
+    }`, Object.assign(depthU(), { uProj:{value:new THREE.Matrix4()}, uRadius:{value:1.6}, uIntensity:{value:1}, uBias:{value:0.03}, uFade:{value:150} }));
+  FX.blur = fxMat(FX_DEPTH+`
+    uniform sampler2D tAO; uniform vec2 uDir;
+    void main(){
+      float z0=viewZ(depthUV(gl_FragCoord.xy)), s=0.0, ws=0.0;
+      for(int i=-4;i<=4;i++){ vec2 hp=gl_FragCoord.xy+uDir*float(i); float w=exp(-float(i*i)/9.0)*max(0.0,1.0-abs(viewZ(depthUV(hp))-z0)/(abs(z0)*0.04+0.08));
+        s+=texture2D(tAO,hp/uHalf).r*w; ws+=w; }
+      gl_FragColor=vec4(vec3(s/max(ws,1e-4)),1.0);
+    }`, Object.assign(depthU(), { tAO:{value:null}, uDir:{value:new THREE.Vector2()} }));
+  // laid over the scene with multiply blending, before the smoke and glows are drawn; picks the half-size pixels at the same depth
+  FX.mul = fxMat(FX_DEPTH+`
+    uniform sampler2D tAO; uniform float uAO;
+    void main(){
+      float z0=viewZ(gl_FragCoord.xy/uFull); vec2 hp=(gl_FragCoord.xy-0.5)*0.5, i0=floor(hp), f=hp-i0; float s=0.0, ws=0.0;
+      for(int k=0;k<4;k++){ vec2 o=vec2(float(k-(k/2)*2),float(k/2)), q=i0+o;
+        float w=(o.x>0.5?f.x:1.0-f.x)*(o.y>0.5?f.y:1.0-f.y)/(abs(viewZ((q*2.0+0.5)/uFull)-z0)/(abs(z0)*0.02+0.02)+0.05)+1e-5;
+        s+=texture2D(tAO,(q+0.5)/uHalf).r*w; ws+=w; }
+      float ao=mix(1.0,s/ws,uAO);
+      gl_FragColor=vec4(vec3(pow(ao,1.0/2.2)),1.0);   // the scene image holds sRGB values
+    }`, Object.assign(depthU(), { tAO:{value:null}, uAO:{value:1} }), { blending:THREE.MultiplyBlending });
+  FX.pre = fxMat(`uniform sampler2D tSrc; uniform vec2 uTexel; uniform float uThreshold, uKnee;
+    void main(){
+      vec3 c=0.25*(sRGBToLinear(texture2D(tSrc,vUv+uTexel*vec2(-0.5,-0.5))).rgb+sRGBToLinear(texture2D(tSrc,vUv+uTexel*vec2(0.5,-0.5))).rgb
+                  +sRGBToLinear(texture2D(tSrc,vUv+uTexel*vec2(-0.5,0.5))).rgb+sRGBToLinear(texture2D(tSrc,vUv+uTexel*vec2(0.5,0.5))).rgb);
+      float br=max(c.r,max(c.g,c.b)), soft=clamp(br-uThreshold+uKnee,0.0,2.0*uKnee); soft=soft*soft/(4.0*uKnee+1e-4);
+      gl_FragColor=vec4(c*max(soft,br-uThreshold)/max(br,1e-4),1.0);
+    }`, { tSrc:{value:null}, uTexel:{value:new THREE.Vector2()}, uThreshold:{value:0.8}, uKnee:{value:0.2} });
+  FX.down = fxMat(`uniform sampler2D tSrc; uniform vec2 uTexel;
+    void main(){ vec2 o=uTexel; gl_FragColor=(texture2D(tSrc,vUv)*4.0+texture2D(tSrc,vUv-o)+texture2D(tSrc,vUv+o)+texture2D(tSrc,vUv+vec2(o.x,-o.y))+texture2D(tSrc,vUv+vec2(-o.x,o.y)))/8.0; }`,
+    { tSrc:{value:null}, uTexel:{value:new THREE.Vector2()} });
+  FX.up = fxMat(`uniform sampler2D tSrc; uniform vec2 uTexel; uniform float uWeight;
+    void main(){ vec2 o=uTexel;
+      vec4 s=texture2D(tSrc,vUv+vec2(-2.0*o.x,0.0))+texture2D(tSrc,vUv+vec2(2.0*o.x,0.0))+texture2D(tSrc,vUv+vec2(0.0,2.0*o.y))+texture2D(tSrc,vUv+vec2(0.0,-2.0*o.y))
+            +2.0*(texture2D(tSrc,vUv+o)+texture2D(tSrc,vUv-o)+texture2D(tSrc,vUv+vec2(o.x,-o.y))+texture2D(tSrc,vUv+vec2(-o.x,o.y)));
+      gl_FragColor=vec4(s.rgb/12.0*uWeight,1.0); }`,
+    { tSrc:{value:null}, uTexel:{value:new THREE.Vector2()}, uWeight:{value:1} }, { blending:THREE.AdditiveBlending });
+  FX.comp = fxMat(`uniform sampler2D tScene, tBloom; uniform float uBloom, uSat, uContrast, uVignette, uAspect; uniform vec3 uTint;
+    float ign(vec2 p){ return fract(52.9829189*fract(dot(p,vec2(0.06711056,0.00583715)))); }
+    void main(){
+      vec3 c=sRGBToLinear(texture2D(tScene,vUv)).rgb+texture2D(tBloom,vUv).rgb*uBloom;
+      float l=dot(c,vec3(0.2126,0.7152,0.0722)); c=max(mix(vec3(l),c,uSat),0.0)*uTint;
+      vec3 s=clamp(LinearTosRGB(vec4(c,1.0)).rgb,0.0,1.0);
+      s=mix(s,s*s*(3.0-2.0*s),uContrast);   // a gentle S-curve
+      vec2 q=(vUv-0.5)*vec2(uAspect,1.0); s*=1.0-uVignette*smoothstep(0.25,1.05,length(q)*1.25);
+      gl_FragColor=vec4(s+(ign(gl_FragCoord.xy)-0.5)/255.0,1.0);   // a touch of dither against banding in the sky
+    }`, { tScene:{value:FX.scene.texture}, tBloom:{value:FX.bloom[0].texture}, uBloom:{value:0.3},
+      uSat:{value:1.05}, uContrast:{value:0.2}, uVignette:{value:0.2}, uAspect:{value:1}, uTint:{value:new THREE.Vector3(1,1,1)} });
+  FX.qCam = new THREE.OrthographicCamera(-1,1,1,-1,0,1); FX.qScene = new THREE.Scene();
+  FX.quad = new THREE.Mesh(new THREE.PlaneGeometry(2,2), FX.comp); FX.quad.frustumCulled = false; FX.qScene.add(FX.quad);
+  return FX.ready=true;
+}
+function fxSize(w,h){
+  FX.w=w; FX.h=h; FX.scene.setSize(w,h);
+  const aw=Math.max(1,w>>1), ah=Math.max(1,h>>1); FX.aoA.setSize(aw,ah); FX.aoB.setSize(aw,ah);
+  FX.bloom.forEach((t,i)=>t.setSize(Math.max(1,w>>(i+1)),Math.max(1,h>>(i+1))));
+}
+function fxPass(mat, target, clear=true){ FX.quad.material=mat; renderer.setRenderTarget(target); const ac=renderer.autoClear; renderer.autoClear=clear; renderer.render(FX.qScene,FX.qCam); renderer.autoClear=ac; }
+const _fxV = new THREE.Vector2();
+function fxLayers(o){   // see-through things (smoke, glows, snow, decals) go on layer 1, drawn after the occlusion so it does not darken them
+  if(o.isLight){ o.layers.enableAll(); return; }
+  const m=o.material; if(!m) return;
+  o.layers.set((Array.isArray(m)?m.some(x=>x.transparent):m.transparent) ? 1 : 0);
+}
+function renderView(){
+  if(!settings.fx || !fxInit()){ camera.layers.enableAll(); renderer.setRenderTarget(null); renderer.render(scene,camera); return; }
+  renderer.getDrawingBufferSize(_fxV); if(_fxV.x!==FX.w||_fxV.y!==FX.h) fxSize(_fxV.x,_fxV.y);
+  const real=gfx==='real', def=T&&T.def||{}, night=!!def.night, dusk=!!def.dusk, w=FX.w, h=FX.h, aw=FX.aoA.width, ah=FX.aoA.height;
+  scene.traverse(fxLayers);
+  camera.layers.set(0); renderer.setRenderTarget(FX.scene); renderer.render(scene,camera);   // solid things, with their depth
+  for(const m of [FX.ao,FX.blur,FX.mul]){ const u=m.uniforms; u.uInvProj.value.copy(camera.projectionMatrixInverse); u.uNear.value=camera.near; u.uFar.value=camera.far; u.uFull.value.set(w,h); u.uHalf.value.set(aw,ah); }
+  const u=FX.ao.uniforms; u.uProj.value.copy(camera.projectionMatrix); u.uIntensity.value=real?1.0:0.6; u.uFade.value=def.fog?Math.min(150,def.fog[1]*0.5):150;
+  fxPass(FX.ao, FX.aoA);
+  FX.blur.uniforms.tAO.value=FX.aoA.texture; FX.blur.uniforms.uDir.value.set(1,0); fxPass(FX.blur, FX.aoB);
+  FX.blur.uniforms.tAO.value=FX.aoB.texture; FX.blur.uniforms.uDir.value.set(0,1); fxPass(FX.blur, FX.aoA);
+  FX.mul.uniforms.tAO.value=FX.aoA.texture; FX.mul.uniforms.uAO.value=real?1:0.7; fxPass(FX.mul, FX.scene, false);
+  const au=renderer.autoClear, su=renderer.shadowMap.autoUpdate; renderer.autoClear=false; renderer.shadowMap.autoUpdate=false;   // the shadows were drawn with the solid pass
+  const bg=scene.background; scene.background=null;   // a colour background would clear the picture whatever autoClear says
+  camera.layers.set(1); renderer.setRenderTarget(FX.scene); renderer.render(scene,camera);
+  scene.background=bg; renderer.autoClear=au; renderer.shadowMap.autoUpdate=su; camera.layers.enableAll();
+  const p=FX.pre.uniforms; p.tSrc.value=FX.scene.texture; p.uTexel.value.set(1/w,1/h); p.uThreshold.value=night?0.6:dusk?0.8:0.94;   // by day only the sun and lamps glow, not white smoke or snow fxPass(FX.pre, FX.bloom[0]);
+  for(let i=1;i<FX.bloom.length;i++){ const s=FX.bloom[i-1]; FX.down.uniforms.tSrc.value=s.texture; FX.down.uniforms.uTexel.value.set(1/s.width,1/s.height); fxPass(FX.down, FX.bloom[i]); }
+  for(let i=FX.bloom.length-2;i>=0;i--){ const s=FX.bloom[i+1]; FX.up.uniforms.tSrc.value=s.texture; FX.up.uniforms.uTexel.value.set(1/s.width,1/s.height); fxPass(FX.up, FX.bloom[i], false); }
+  const c=FX.comp.uniforms;
+  c.uBloom.value=(real?0.12:0.08)*(night?2.4:dusk?1.5:1);
+  c.uSat.value=real?1.06:1.02; c.uContrast.value=real?0.22:0.1; c.uVignette.value=real?0.22:0.12; c.uAspect.value=w/h;
+  c.uTint.value.set(...(dusk?[1.03,1,0.96]:night?[0.97,0.99,1.04]:[1,1,1]));
+  fxPass(FX.comp, null);
+}
 function outline(m, t=0.035){ if(gfx!=='toon') return m; const g=m.geometry; if(!g.boundingBox) g.computeBoundingBox();
   const s=g.boundingBox.getSize(new THREE.Vector3()), c=g.boundingBox.getCenter(new THREE.Vector3());
   if(s.x<1e-4||s.y<1e-4||s.z<1e-4) return m;
@@ -2959,6 +3098,7 @@ function buildMenu(){
     '<div class="cnames">'+c.tracks.map(ti=>TRACKS[ti].name).join(' · ')+'</div><div class="ctro" id="ctro'+i+'"></div><div class="csave" id="csave'+i+'"></div></div>').join('');
   $('gfx').innerHTML='<div class="trk" data-i="real">Realistic</div><div class="trk" data-i="toon">Cartoon</div>';
   $('music').innerHTML='<div class="trk" data-i="on">🎵 On</div><div class="trk" data-i="off">🔇 Off</div>';
+  $('fxo').innerHTML='<div class="trk" data-i="on">On</div><div class="trk" data-i="off">Off</div>';
   $('qual').innerHTML=['low','medium','high'].map(q=>'<div class="trk" data-i="'+q+'">'+q[0].toUpperCase()+q.slice(1)+'</div>').join('');
   $('camd').innerHTML=['Close','Normal','Far'].map((n,i)=>'<div class="trk" data-i="'+i+'">'+n+'</div>').join('');
   $('diffs').innerHTML=DIFFS.map((d,i)=>'<div class="trk" data-i="'+i+'">'+d.name+'</div>').join('');
@@ -2976,6 +3116,7 @@ function buildMenu(){
     document.querySelectorAll('#gfx .trk').forEach(e=>e.classList.toggle('sel',e.dataset.i===gfx));
     document.querySelectorAll('#music .trk').forEach(e=>e.classList.toggle('sel',(e.dataset.i==='on')===musicOn));
     document.querySelectorAll('#qual .trk').forEach(e=>e.classList.toggle('sel',e.dataset.i===settings.quality));
+    document.querySelectorAll('#fxo .trk').forEach(e=>e.classList.toggle('sel',(e.dataset.i==='on')===settings.fx));
     document.querySelectorAll('#camd .trk').forEach(e=>e.classList.toggle('sel',+e.dataset.i===settings.cam));
     TRACKS.forEach((t,i)=>{ const r=getRec(i); $('tbest'+i).textContent=r?'🏆 '+fmt(r.total):'no record yet'; });
     $('tracks').style.display = champ() ? 'none' : 'flex';
@@ -3010,6 +3151,7 @@ function buildMenu(){
   pick('music','.trk',i=>{ setMusic(i); });
   pick('qual','.trk',i=>{ settings.quality=i; saveSettings(); applyQuality(); applyTone(); buildWorld(menuTrack()); previewEngine=null; showPreview(); });
   pick('camd','.trk',i=>{ settings.cam=+i; saveSettings(); });
+  pick('fxo','.trk',i=>{ settings.fx=i==='on'; saveSettings(); });
   mark(); syncMusicGain();
 }
 /* ---------- engine gallery ---------- */
@@ -3238,7 +3380,7 @@ function frame(now){
   if(state==='race'){ if(!paused) update(dt); }
   else if(previewEngine){ const a=now/2500   /* menu camera: around the engine; higher and slower on the track screen */, p=previewEngine.position; camera.fov=50; camera.updateProjectionMatrix(); const wide=menuStep==='track', pr=wide?38:5.5+previewEngine.userData.len*0.65, aa=wide?a*0.4:a; camera.position.set(p.x+Math.sin(aa)*pr,wide?20:3.2,p.z+Math.cos(aa)*pr); camera.lookAt(p.x,menuStep==='engine'?0.9:wide?-6:1.9,p.z); placeSun(p.x,p.z); updateSnow(dt); animEngine(previewEngine,now/300,Math.sin(now/900)); }
   if(T&&T.anim) for(const f of T.anim) f(dt,now/1000);
-  renderer.render(scene,camera);
+  renderView();
 }
 markShared(); initClouds(); buildMenu(); toMenu(); requestAnimationFrame(frame);
 </script>
