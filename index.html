@@ -150,8 +150,8 @@
   #engInfo .sw{width:44px;height:44px;line-height:44px;font-size:18px;margin:0;text-align:center;flex:none}
   #engInfo b{display:block;font-size:22px} #engInfo .kind{font-size:12px;margin:0}
   #engInfo .st{width:210px;font-size:11px;grid-template-columns:62px 1fr;margin:0} #engInfo .bar{height:7px}
-  #chars .card{width:74px;padding:5px 3px} #chars .card .sw{width:28px;height:28px;line-height:28px;font-size:13px}
-  @media (max-width:1279px){ #chars{max-width:656px} }   /* the thirteen engines in one row, or else in rows of seven and six */
+  #chars{max-width:680px}   /* the fourteen engines in two rows of seven */
+  #chars .card{width:78px;padding:5px 3px} #chars .card .sw{width:28px;height:28px;line-height:28px;font-size:13px}
   #chars .card b{font-size:13.5px}
   .mfoot{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:4px 12px}
   .mfoot button{margin:8px 0 14px}
@@ -315,7 +315,7 @@
 
 <div id="gallery">
   <h1>ENGINE GALLERY</h1>
-  <h2>Browse all thirteen engines, compare their characteristics, and hear their whistles.</h2>
+  <h2>Browse all fourteen engines, compare their characteristics, and hear their whistles.</h2>
   <div id="galTop"></div>
   <div class="ggrid" id="galGrid"></div>
   <button id="galClose">CLOSE</button>
@@ -346,6 +346,7 @@ const CHARS = [
   {name:'Edward', num:'2',  color:0x2f7fe6, type:'steam', scale:1.00, speed:27.8, acc:15.5, turn:2.00, tender:1.7, L:0.35, drv:[-0.6,0.5], drvR:0.5, lead:[1.25,1.7], boilerR:0.57, safetyV:true, dipFront:true, cyl:true, splashers:true, lampPos:'footC', numOut:'#181920', kind:'Tender engine 4-4-0'},
   {name:'Rosie',  num:'37', color:0xe372ab, type:'steam', tanks:true,  scale:0.96, speed:27.2, acc:17,   turn:2.15, line:0xc8253d, trim:0xf0c420, dome:true, safetyV:true, boilerR:0.57, L:-0.05, drv:[-0.85,0,0.85], cyl:true, lampPos:'top', wheelCol:0x25262e, wheelRim:0xe372ab, numOut:'#181920', kind:'Tank engine 0-6-0'},
   {name:'Rebecca',num:'22', color:0xffc21f, type:'steam', scale:1.03, speed:29.0, acc:12.5, turn:1.78, line:0xd62f2c, lineEdge:0xffffff, casing:true, tender:2.1, L:1.0, drv:[-0.7,0.25,1.2], drvR:0.44, lead:[1.92,2.32], trail:[-1.3], cyl:true, lampPos:'footC', wheelCol:0x25262e, wheelRim:0xffffff, numFill:'#d62f2c', numOut:'#ffffff', kind:'Streamlined engine 4-6-2'},
+  {name:'Lady',   num:'',   color:0x9b2d72, type:'steam', tanks:true,  scale:0.93, speed:27.3, acc:16.5, turn:2.20, line:0xf2c84b, dark:0x34143a, gilt:true, dome:true, safetyV:true, boilerR:0.55, L:-0.15, drv:[-0.7,0.55], cyl:true, lampPos:'twin', pattern:'lady', smoke:0xffefb8, kind:'Tank engine 0-4-0'},
 ];
 const TRACKS = [
   {name:'Sodor Meadows', sky:0x8fd0ff, top:0x2a78d8, ground:0x5fae45, hill:0x4b9438, tree:0x2f7d32, rocks:0.05, mount:0x7d8fa8, dust:0x9c8a5a, verge:0x8a7a52,
@@ -599,6 +600,7 @@ const FACE_SPEC = {
   Edward: { shape:'round',  ex:20.5, ey:50, erx:14,   ery:14.5, topLid:0.25, botLid:0.08, lidTilt:-1.3, lashes:'none', iris:'#243242', brow:'kind',      mouth:'wise',      cheeks:'kind',     nose:{y:69, rx:0.118, ry:0.15,  rz:0.155, tipY:0.0} },
   Rosie:  { shape:'round',  ex:21,   ey:50, erx:16,   ery:18,   topLid:0.08, botLid:0.02, lidTilt:-0.6, lashes:'long', iris:'#2a3c4a', brow:'warm',      mouth:'sweet',     cheeks:'freckles', nose:{y:69, rx:0.11,  ry:0.105, rz:0.125, tipY:0.01} },
   Rebecca:{ shape:'round',  ex:21,   ey:50, erx:16,   ery:17.5, topLid:0.10, botLid:0.03, lidTilt:-0.9, lashes:'long', iris:'#2f5a86', brow:'warm',      mouth:'beam',      cheeks:'rosy',     nose:{y:69, rx:0.12,  ry:0.115, rz:0.135, tipY:0.0} },
+  Lady:   { shape:'round',  ex:21,   ey:50, erx:15.5, ery:17,   topLid:0.16, botLid:0.04, lidTilt:-1.0, lashes:'long', iris:'#6b3d8f', brow:'elegant',   mouth:'sweet',     cheeks:'soft',     nose:{y:69, rx:0.10,  ry:0.10,  rz:0.12, tipY:0.01} },
 };
 function faceGrad(g, sp, real){
   const pal = sp.tone==='steel'
@@ -905,6 +907,17 @@ function getNiaTankTex(real){
     g.fillStyle='#ffd53d'; g.font='bold 34px Arial'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('NIA',w/2,y0+bh/2+2);
   });
 }
+function getLadyTankTex(){   // gold Victorian lining with incurved corners and LADY in gold, on a clear ground laid over the tank side
+  const k='ladyTank'; if(texCache[k]) return texCache[k];
+  return texCache[k]=canvasTex(512,256,(g,w,h)=>{
+    const frame=(m,r)=>{ g.beginPath(); g.moveTo(m+r,m); g.lineTo(w-m-r,m); g.arc(w-m,m,r,Math.PI,Math.PI/2,true); g.lineTo(w-m,h-m-r); g.arc(w-m,h-m,r,-Math.PI/2,Math.PI,true);
+      g.lineTo(m+r,h-m); g.arc(m,h-m,r,0,-Math.PI/2,true); g.lineTo(m,m+r); g.arc(m,m,r,Math.PI/2,0,true); g.closePath(); g.stroke(); };
+    g.strokeStyle='#f2c84b'; g.lineWidth=7; frame(14,26); g.lineWidth=2.5; frame(30,18);
+    const gr=g.createLinearGradient(0,h/2-44,0,h/2+44); gr.addColorStop(0,'#fff0a8'); gr.addColorStop(0.5,'#f2c84b'); gr.addColorStop(1,'#b8862a');
+    g.font='bold 96px Georgia, "Times New Roman", serif'; g.textAlign='center'; g.textBaseline='middle';
+    g.lineWidth=7; g.lineJoin='round'; g.strokeStyle='#3a1236'; g.strokeText('LADY',w/2,h/2+6); g.fillStyle=gr; g.fillText('LADY',w/2,h/2+6);
+  });
+}
 function getTobySideTex(num, real){
   const k='tobySide|'+real; if(texCache[k]) return texCache[k];
   return texCache[k]=canvasTex(512,256,(g,w,h)=>{
@@ -1156,6 +1169,8 @@ function buildEngine(c){
   const num = (x,y,z,ry,s) => { if(!numMat) return; const m=mesh(new THREE.PlaneGeometry(s,s),numMat,x,y,z,n); m.rotation.y=ry; m.castShadow=false; };
   const box = (w,h,d,mat,x,y,z,ol=true) => { const m=mesh(new THREE.BoxGeometry(w,h,d),mat,x,y,z,n); return ol?outline(m):m; };
   const edgeMat = c.lineEdge!=null ? toon(nat(c.lineEdge)) : null;
+  const darkMat = c.dark!=null ? toon(nat(c.dark)) : E.black;   // footplate, cab roof and chimney
+  const giltOr = m => c.gilt ? E.brass : m;   // Lady's gold smokebox, buffers, coupling rods and lamps
   const stripe = (x,y,len,z,mat=line) => {   // a lining band along a side (x = its outer face), edged in c.lineEdge when there is one
     box(0.02,0.05,len,mat,x,y,z,false);
     if(edgeMat) box(0.016,0.085,len,edgeMat,x-Math.sign(x)*0.003,y,z,false);
@@ -1222,7 +1237,7 @@ function buildEngine(c){
     for(const x of [-0.52,0.52]){
       cyl(0.11,0.13,0.06,E.black,x,0.66,z+s*0.09,true,false);
       cyl(0.065,0.065,0.20,E.black,x,0.66,z+s*0.16,true,false);
-      cyl(0.17,0.17,0.06,E.iron,x,0.66,z+s*0.28,true);
+      cyl(0.17,0.17,0.06,giltOr(E.iron),x,0.66,z+s*0.28,true);
     }
     // central coupling hook
     box(0.06,0.14,0.14,E.iron,0,0.63,z+s*0.13,false);
@@ -1230,7 +1245,7 @@ function buildEngine(c){
 
   const lamp = (x,y,z) => {
     const l=new THREE.Group(); l.position.set(x,y,z); n.add(l);
-    mesh(new THREE.BoxGeometry(0.17,0.22,0.16), M.wood, 0,0.11,0, l);
+    mesh(new THREE.BoxGeometry(0.17,0.22,0.16), giltOr(M.wood), 0,0.11,0, l);
     mesh(new THREE.CylinderGeometry(0.06,0.08,0.07,10), E.brass, 0,0.25,0, l);
     const lens=mesh(new THREE.CircleGeometry(0.065,12), E.lamp, 0,0.11,0.082, l); lens.castShadow=false;
   };
@@ -1261,16 +1276,16 @@ function buildEngine(c){
     const dipF = c.dipFront ? 1.05+L : 99, dipB = c.dipBack ? -1.42 : -99;
     const zStart = c.dipBack ? -1.42 : -1.62, zEnd = c.dipFront ? 1.08+L : 1.60+L;
     box(1.56,0.24,3.1+L,E.black,0,0.62,L/2); // main chassis spine
-    box(1.64,0.12,zEnd-zStart,E.black,0,0.78,(zStart+zEnd)/2); // raised running plate
+    box(1.64,0.12,zEnd-zStart,darkMat,0,0.78,(zStart+zEnd)/2); // raised running plate
     box(1.68,0.065,zEnd-zStart+0.04,line,0,0.82,(zStart+zEnd)/2,false);
     if(c.dipFront){
-      const ramp=mesh(makeRampGeo(0.14,0.22,1.64),E.black,0,0.66,1.30+L,n); ramp.rotation.y=Math.PI; outline(ramp);
+      const ramp=mesh(makeRampGeo(0.14,0.22,1.64),darkMat,0,0.66,1.30+L,n); ramp.rotation.y=Math.PI; outline(ramp);
       const rLine=mesh(makeRampGeo(0.06,0.22,1.68),line,0,0.74,1.30+L,n); rLine.rotation.y=Math.PI; rLine.castShadow=false;
-      box(1.64,0.14,0.34,E.black,0,0.66,1.45+L);
+      box(1.64,0.14,0.34,darkMat,0,0.66,1.45+L);
       box(1.68,0.06,0.36,line,0,0.74,1.45+L,false);
     }
     if(c.dipBack){
-      box(1.64,0.14,0.22,E.black,0,0.66,-1.52);
+      box(1.64,0.14,0.22,darkMat,0,0.66,-1.52);
       box(1.68,0.06,0.24,line,0,0.74,-1.52,false);
     }
     beam(1.6+L,1); if(!tl) beam(-1.62,-1);
@@ -1312,14 +1327,14 @@ function buildEngine(c){
       }
       // smokebox + saddle beneath
       box(0.94,0.42,0.46,E.black,0,0.96,1.44+L);
-      cyl(bR+0.04,bR+0.04,0.46,E.black,0,by,1.44+L,true);
+      cyl(bR+0.04,bR+0.04,0.46,giltOr(E.black),0,by,1.44+L,true);
       face(bR-0.02, by, 1.675+L);
       if(rl) for(const x of [-bR*0.82, bR*0.82]){ cyl(0.02,0.02,1.5+L,E.steel,x,by+bR*0.55,0.38+L/2,true,false); }
 
       // chimney & cap
       const chH = c.saddle ? 0.78 : (c.bigSplash ? 0.74 : 0.62);
       const chY = by + bR + chH*0.42;
-      cyl(c.saddle?0.16:0.20, 0.145, chH, E.black, 0, chY, funnelZ);
+      cyl(c.saddle?0.16:0.20, 0.145, chH, darkMat, 0, chY, funnelZ);
       cyl(0.24, 0.18, 0.11, c.dome?E.brass:E.black, 0, chY+chH*0.5, funnelZ, false, false);
       if(c.saddle) smokeY = 3.0; else smokeY = chY + chH*0.55;
 
@@ -1352,11 +1367,11 @@ function buildEngine(c){
         box(0.10,0.82,0.12,body,sx*0.69,1.82,-1.40); // rear cab corner pillar
       }
       box(1.48,0.52,0.12,body,0,1.10,-1.40);
-      const roof=cyl(0.84,0.84,1.22,E.black,0,2.28,-0.95,true); roof.scale.set(1,1,0.26);
+      const roof=cyl(0.84,0.84,1.22,darkMat,0,2.28,-0.95,true); roof.scale.set(1,1,0.26);
       disc(0.16,0.40,1.94,-0.39,0,E.brass); disc(0.16,-0.40,1.94,-0.39,0,E.brass);
     } else {
       box(1.5,1.45,1.05,body,0,1.6,-0.95);
-      const roof=cyl(0.86,0.86,tl?1.5:1.25,E.black,0,2.3,tl?-1.05:-0.95,true); roof.scale.set(1,1,0.3);
+      const roof=cyl(0.86,0.86,tl?1.5:1.25,darkMat,0,2.3,tl?-1.05:-0.95,true); roof.scale.set(1,1,0.3);
       for(const sx of [-1,1]){
         const wx = sx*0.755;
         win(0.56,0.52,wx,1.96,-0.95,sx*Math.PI/2, winTrim);
@@ -1376,6 +1391,12 @@ function buildEngine(c){
         if(c.pattern==='nia'){
           const pm = new THREE.MeshBasicMaterial({map:getNiaTankTex(rl)});
           const pan = mesh(new THREE.PlaneGeometry(tLen-0.06, 0.80), pm, x+sx*0.184, 1.27, tz, n);
+          pan.rotation.y = sx*Math.PI/2; pan.castShadow=false;
+        } else if(c.pattern==='lady'){   // a lit decal, so the tank keeps its own paint under the gold lining and name
+          const t = getLadyTankTex();
+          const lm = rl ? new THREE.MeshPhysicalMaterial({map:t, transparent:true, roughness:0.32, metalness:0.45, clearcoat:0.9, clearcoatRoughness:0.18, envMapIntensity:0.7})
+                        : new THREE.MeshToonMaterial({map:t, transparent:true, gradientMap:gradMap});
+          const pan = mesh(new THREE.PlaneGeometry(tLen-0.06, 0.80), lm, x+sx*0.184, 1.27, tz, n);
           pan.rotation.y = sx*Math.PI/2; pan.castShadow=false;
         } else {
           for(const y of [0.92,1.62]) box(0.02,0.05,tLen-0.1,line,x+sx*0.185,y,tz,false);
@@ -1520,7 +1541,7 @@ function buildEngine(c){
       for(const z of (c.lead||[]).concat(c.trail||[])) wheel(x, z, 0.26, wCol, rimCol);
     }
     if(drv.length>1 && (steam||c.rods)){
-      rods.push({m:mesh(new THREE.BoxGeometry(0.055,0.085,d1-d0+0.26), E.steel, x+sx*0.135,R,dm, n), y:R, z:dm, r:R*0.44});
+      rods.push({m:mesh(new THREE.BoxGeometry(0.055,0.085,d1-d0+0.26), giltOr(E.steel), x+sx*0.135,R,dm, n), y:R, z:dm, r:R*0.44});
       if(c.shunter){
         const jw=mesh(WG.hub, E.black, x+sx*0.03, R, -1.35, n); jw.rotation.z=Math.PI/2; jw.scale.set(1,1.6,1.6);
       }
@@ -1927,6 +1948,7 @@ const VOICE = {
   Emily:  { pipes:[[1045,1]], pat:[[0,0.26],[0.44,0.38]], scoop:0.82, glide:0.075, edge:0.038, hiss:0.022, vib:5.3, vibD:0.004, surge:1.38 },
   Edward: { pipes:[[1174,0.95]], pat:[[0,0.28],[0.46,0.50]], scoop:0.91, glide:0.105, edge:0.028, hiss:0.020, vib:5.2, vibD:0.005 },
   Rosie:  { pipes:[[2792,0.48],[3330,0.75]], pat:[[0,0.62]], scoop:0.93, glide:0.055, edge:0.015, hiss:0.018, vib:6.2, vibD:0.0035 },
+  Lady:   { pipes:[[1568,0.55],[1976,0.42],[2349,0.32]], pat:[[0,0.20],[0.30,0.60]], scoop:0.93, glide:0.06, edge:0.018, hiss:0.018, vib:5.8, vibD:0.004, sparkle:[2637,3136,3951,5274] },
   Rebecca:{ pipes:[[1047,0.85],[1319,0.60]], pat:[[0,0.16],[0.24,0.16],[0.48,0.46]], scoop:0.90, glide:0.07, edge:0.026, hiss:0.024, vib:5.4, vibD:0.004 },
   Toby:   { bell:true, pat:[[0,0.22],[0.36,0.22]] },
   Diesel: { horn:[[259,1],[385,0.65]], pat:[[0,0.54]], lp:1150, formant:680, vib:3.6 },
@@ -1976,6 +1998,7 @@ function engineWhistle(c,o={}){
     else if(v.horn) hornBlast(t,len,v,vol,dest,wetAmt);
     else steamBlast(t,len,v,vol,dest,wetAmt);
   }
+  if(v.sparkle){ const d=filt('highpass',1800,dest); if(wetAmt>0) wet(d,wetAmt*1.6); v.sparkle.forEach((f,i)=>bell(t0+0.06+i*0.09,f,0.022*vol,d,0.8)); }   // Lady: a shimmer of little bells over the whistle
   if(!o.dest||o.dest===sfxGain) duckMusic(0.35,pat[pat.length-1][0]+pat[pat.length-1][1]+0.2);
 }
 /* sound effects (an optional destination places the sound in the scene) */
@@ -3004,6 +3027,7 @@ const ENGINE_INFO = {
   Edward: { cat:'tender', bio:'Kind, dependable blue #2 tender engine. Well-balanced mix of tender stability, smooth cornering, and brisk acceleration.', whistle:'Warm mellow steam whistle · Short & long blast' },
   Rosie:  { cat:'tank',   bio:'Energetic lavender-pink #37 tank engine with freckles, brass dome, and top headlamp. Snappy acceleration and agile handling.', whistle:'High bubbly two-chime whistle · Octave peep' },
   Rebecca:{ cat:'tender', bio:'Cheerful sunshine-yellow #22 Pacific in a Bulleid air-smoothed casing, with red lining and white-rimmed wheels. Big-engine speed, with livelier acceleration and handling than Gordon or Henry.', whistle:'Bright major-third chime · Hip, hip, hooray triple toot' },
+  Lady:   { cat:'tank',   bio:'Graceful red-violet tank engine from the magic railroad, with gold lining, a gold smokebox and her name in gold on her tanks. Light, quick off the mark and nimble, trailing golden smoke.', whistle:'Sweet three-note chime with a sparkle of bells · Short & long call' },
 };
 const GAL_FILTERS = [{id:'all',name:'All ('+CHARS.length+')'},{id:'tank',name:'Tank engines'},{id:'tender',name:'Tender engines'},{id:'other',name:'Tram / Diesel / Electric'}];
 const galCache = {}, galMass = {};
