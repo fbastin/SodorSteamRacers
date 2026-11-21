@@ -21,7 +21,7 @@ On a touch screen, on-screen buttons appear: ◀ ▶ to steer (the engine accele
 
 ## Features
 
-- **Twelve engines**, modelled by type (tank engines, tender engines, a tram, a diesel shunter, an electric), each with its own speed, acceleration and handling. Heavier engines push lighter ones aside.
+- **Thirteen engines**, modelled by type (tank engines, tender engines, a streamlined Pacific in an air-smoothed casing, a tram, a diesel shunter, an electric), each with its own speed, acceleration and handling. Heavier engines push lighter ones aside.
 - **Sixteen tracks**, each with three boost pads:
   - Sodor Meadows, Seaside Line, Quarry Run, Autumn Woods, Snowy Pass and Moonlight Yard (a night race);
   - Harbour Lights (at dusk, out along a pier to a lighthouse), Blossom Valley (cherry blossom and falling petals), Red Rock Canyon (switchbacks between mesas and cacti), Misty Moor (fast sweeping bends in the fog, round a stone circle), Lakeside Loop (round a lake with sailing boats), Timber Line (pine forest and log piles), Rainy Glen (a technical track in the rain), Harvest Fields (square farm roads, hay bales and windmills), Ironworks (smoking chimneys at dusk) and Starlight Summit (snow under the northern lights).
@@ -34,7 +34,7 @@ On a touch screen, on-screen buttons appear: ◀ ▶ to steer (the engine accele
 - **Driving skills**: rocket start on the signal lights, three-stage drift mini-turbos, slipstream behind other engines, boost pads.
 - **Seven items**: Coal Boost, Triple Coal, Oil Slick, Runaway Truck, Whistle Blast, Buffer Shield and Red Signal.
 - **Race screen**: signal-light countdown, speedometer, lap splits, wrong-way warning, minimap, and race statistics at the finish.
-- **Engine Gallery**: browse all twelve engines with 3D previews, characteristics (speed, acceleration, handling, weight), and interactive whistle playback.
+- **Engine Gallery**: browse all thirteen engines with 3D previews, characteristics (speed, acceleration, handling, weight), and interactive whistle playback.
 - **Hall of Fame** per track, with the five best race times and the five best lap times, ranked separately for races (Single Race and Season) and for Time Trial.
 - **Options**: Realistic or Cartoon graphics, three quality levels for slower computers, camera distance, music and sound-effect volumes.
 - **Music**: a cheerful folk menu theme (accordion, tin whistle, guitar), recorded and looped (if `music/menu.js` is missing, a gentle synthesized theme plays instead), and original synthesized music in the races: a race theme arranged in a different style on each track (bouncy, calypso, rock, folk, sleigh bells, night swing, brass band, harp, western, pipes, reggae, bluegrass, organ jazz, barn dance, machine beat, music box) that speeds up on the final lap, and finish-line fanfares.
